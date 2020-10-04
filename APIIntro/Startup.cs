@@ -1,6 +1,8 @@
 
+using APIIntro.AuthorizationPolicies;
 using APIIntro.Extensions;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -22,29 +24,22 @@ namespace APIIntro
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            //Setup Authorization
+            services.AddScoped<IAuthorizationHandler, LocalHostHandler>();
+            
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("LocalHostOnly",
-                                        policy => policy.RequireAssertion(context =>
-                                        {
-                                            if (context.Resource is AuthorizationFilterContext mvcContext)
-                                            {
-                                                var cn = mvcContext.HttpContext.Connection;
-                                                bool isLocal = mvcContext.HttpContext.Request.IsLocal();
-                                                //Log.Logger.Information($"Remote:{cn.RemoteIpAddress} Local:{cn.RemoteIpAddress} isLocal:{isLocal}");
-
-                                                return isLocal;
-                                            }
-                                            else
-                                            {
-                                                return true;
-                                            }
-                                        }).Build());
+                    policy =>
+                    {
+                        policy.AddRequirements(new LocalHostRequirement());
+                    });
             });
 
             services.AddControllers();
 
             services.AddSingleton<IConfiguration>(Configuration);
+            services.AddHttpContextAccessor();
 
         }
 
